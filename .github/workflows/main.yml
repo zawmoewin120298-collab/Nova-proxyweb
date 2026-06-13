@@ -1,21 +1,22 @@
-name: Build to GHCR and Deploy to Railway
+name: Build and Push Docker Image to GHCR
 
 on:
   push:
     branches:
-      - master # သင့် branch နာမည် master ဖြစ်လို့ ဒီအတိုင်းထားပါ
+      - main  # main branch ထဲ ကုဒ်တွန်းတင်တိုင်း Auto အလုပ်လုပ်စေရန်
+    tags:
+      - 'v*'   # v1.0.2 စသဖြင့် tag ပေးပြီး တွန်းရင်လည်း အလုပ်လုပ်စေရန်
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository }} # zawmoewin120298-collab/edge-vless အလိုအလျောက်ဖြစ်မည်
 
 jobs:
-  # ၁။ Image ကို ဆောက်ပြီး GitHub Packages ပေါ်သို့ တင်ခြင်း
-  build-and-push-ghcr:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: write # GHCR ပေါ် Image ရေးခွင့်ပေးရန်
 
     steps:
       - name: Checkout repository
@@ -26,31 +27,23 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # ဒါက အလိုအလျောက် အလုပ်လုပ်ပါတယ်၊ သပ်သပ်ထည့်စရာမလိုပါ
+          password: ${{ secrets.GITHUB_TOKEN }} # GitHub ကပေးသော Token အလိုအလျောက်သုံးမည်
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+            type=raw,value=v1.0.2
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile # ဆရာကြီးရဲ့ Dockerfile အား ဖတ်ခိုင်းခြင်း
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v1.0.2
-
-  # ၂။ GitHub Packages ပေါ်တင်ပြီးပါက Railway ကို ဆက်လက် Deploy လုပ်ခိုင်းခြင်း
-  deploy-to-railway:
-    needs: build-and-push-ghcr # အဆင့် ၁ အောင်မြင်မှ လုပ်မယ်
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway
-        run: railway up --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
