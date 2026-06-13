@@ -1,12 +1,45 @@
-name: Deploy to Railway
+name: Build to GHCR and Deploy to Railway
 
 on:
   push:
     branches:
-      - master # သင့် repo ရဲ့ branch အမည် master ဖြစ်လို့ ဒီအတိုင်းထားပါ
+      - master # သင့် branch နာမည် master ဖြစ်လို့ ဒီအတိုင်းထားပါ
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  deploy:
+  # ၁။ Image ကို ဆောက်ပြီး GitHub Packages ပေါ်သို့ တင်ခြင်း
+  build-and-push-ghcr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # ဒါက အလိုအလျောက် အလုပ်လုပ်ပါတယ်၊ သပ်သပ်ထည့်စရာမလိုပါ
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v1.0.2
+
+  # ၂။ GitHub Packages ပေါ်တင်ပြီးပါက Railway ကို ဆက်လက် Deploy လုပ်ခိုင်းခြင်း
+  deploy-to-railway:
+    needs: build-and-push-ghcr # အဆင့် ၁ အောင်မြင်မှ လုပ်မယ်
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -16,8 +49,8 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway
-        # --detach က နောက်ကွယ်ကနေ တင်ပေးဖို့ ဖြစ်ပါတယ်
         run: railway up --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          
+
+
