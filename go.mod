@@ -1,4 +1,4 @@
-module Nova-proxyweb
+module github.com/ara-framework/nova-proxy
 
 go 1.22
 
