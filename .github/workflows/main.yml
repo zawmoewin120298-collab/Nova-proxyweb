@@ -3,7 +3,7 @@ name: Build to GHCR and Deploy to Railway
 on:
   push:
     branches:
-      - main # သင့် branch နာမည် main အတိုင်း ထားပါတယ်
+      - main # သင့် branch အမည် main အတိုင်း ထားပါတယ်
 
 jobs:
   build-and-push-ghcr:
@@ -28,7 +28,7 @@ jobs:
         with:
           context: .
           push: true
-          # သင့် username ရော repo name ကိုပါ စာလုံးသေးနဲ့ အသေပုံသေရိုက်ထည့်ပေးလိုက်ခြင်းဖြစ်လို့ အမှားမရှိနိုင်တော့ပါ
+          # GHCR အတွက် အသုံးပြုသူအမည်နှင့် repository အမည်ကို စာလုံးသေးအမှန်အတိုင်း သတ်မှတ်ပေးထားခြင်း
           tags: |
             ghcr.io/zawmoewin120298-collab/nova-proxyweb:latest
             ghcr.io/zawmoewin120298-collab/nova-proxyweb:v1.0.2
@@ -47,4 +47,3 @@ jobs:
         run: railway up --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
